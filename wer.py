@@ -3,13 +3,9 @@ Some of the utility functions copied from or based on
 https://github.com/kaldi-asr/kaldi/blob/master/egs/gop_speechocean762/s5/local/utils.py
 """
 import argparse
-import regex
 from utils import clean_phones
-from metrics import predict_scores, wer_details_for_batch, wer_summary
+from metrics import wer_details_for_batch, wer_summary
 from typing import Dict, List
-
-trn_pat = r'([A-Za-z\s]+)\((\S+)-(\S+)\)'
-trn_matcher = regex.compile(trn_pat)
 
 
 def get_args():
@@ -22,7 +18,7 @@ def get_args():
     return args
 
 
-def get_scores(hyps: Dict[str, List[str]], refs: Dict[str, List[str]]) -> (Dict[str, List[int]], Dict):
+def get_wer_align(hyps: Dict[str, List[str]], refs: Dict[str, List[str]]) -> Dict:
     ref_list = []
     hyp_list = []
     utts = []
@@ -38,10 +34,7 @@ def get_scores(hyps: Dict[str, List[str]], refs: Dict[str, List[str]]) -> (Dict[
     for d in details:
         wer_align[d['key']] = d['alignment']
 
-    import json
-    json.dump(wer_align, open('tmp/wer_alignment.json', 'w'), indent='\t')
-
-    return predict_scores(utts, details), wer_align
+    return wer_align
 
 
 def get_result_str(wer_align: List, hyp: List[str], ref: List[str], pred: List[float], label: List[float]) -> str:
@@ -112,12 +105,12 @@ def main():
             hyp_list.append(clean_phones(h))
             ref_list.append(clean_phones(ref[utt]))
 
-    details = wer_details_for_batch(utts, ref_list, hyp_list)
+    details = wer_details_for_batch(utts, ref_list, hyp_list, scoring_mode='present')
 
     print(wer_summary(details))
 
     # scores = predict_scores(utts, details)
-    # preds, wer_align = get_scores(hyps, refs)
+    # preds, wer_align = get_wer_align(hyps, refs)
     # f = open(args.output_path, 'w')
     # hyp_scores = []
     # true_scores = []

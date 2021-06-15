@@ -340,7 +340,7 @@ def _batch_to_dict_format(ids, seqs):
     return dict(zip(ids, seqs))
 
 
-def wer_details_for_batch(ids, refs, hyps, compute_alignments=False):
+def wer_details_for_batch(ids, refs, hyps, compute_alignments=False, scoring_mode='strict'):
     """Convenient batch interface for ``wer_details_by_utterance``.
 
     ``wer_details_by_utterance`` can handle missing hypotheses, but
@@ -358,6 +358,13 @@ def wer_details_for_batch(ids, refs, hyps, compute_alignments=False):
     compute_alignments : bool, optional
         Whether to compute alignments or not. If computed, the details
         will also store the refs and hyps. (default: False)
+    scoring_mode : {'strict', 'all', 'present'}
+        How to deal with missing hypotheses (reference utterance id
+        not found in hyp_dict).
+
+        * 'strict': Raise error for missing hypotheses.
+        * 'all': Score missing hypotheses as empty.
+        * 'present': Only score existing hypotheses.
 
     Returns
     -------
@@ -380,7 +387,7 @@ def wer_details_for_batch(ids, refs, hyps, compute_alignments=False):
     refs = _batch_to_dict_format(ids, refs)
     hyps = _batch_to_dict_format(ids, hyps)
     return wer_details_by_utterance(
-        refs, hyps, compute_alignments=compute_alignments, scoring_mode="strict"
+        refs, hyps, compute_alignments=compute_alignments, scoring_mode=scoring_mode
     )
 
 
@@ -738,23 +745,6 @@ def top_wer_spks(details_by_speaker, top_k=10):
         return spks_by_wer
 
 
-def predict_scores(utts: List[str], wer_details: List[dict]) -> dict:
-    scores = {u: [] for u in utts}
-    for sentence in wer_details:
-        align = sentence['alignment']
-        utt = sentence['key']
-        for a in align:
-            op = a[0]
-            if op == '=':
-                scores[utt].append(2)
-            if op == 'S':
-                scores[utt].append(0)
-            if op == 'D':
-                scores[utt].append(0)
-
-    return scores
-
-
 def test():
     from utils import clean_phones
     hyp = {}
@@ -787,9 +777,6 @@ def test():
     json.dump(details, open('tmp/wer_alignment.json', 'w'), indent='\t')
 
     print(wer_summary(details))
-
-    scores = predict_scores(utts, details)
-    json.dump(scores, open('tmp/pred_scores.json', 'w'), indent='\t')
 
 
 if __name__ == '__main__':

@@ -5,7 +5,7 @@ https://github.com/kaldi-asr/kaldi/blob/master/egs/gop_speechocean762/s5/local/u
 import argparse
 from utils import clean_phones
 from metrics import wer_details_for_batch, wer_summary
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 
 def get_args():
@@ -52,6 +52,20 @@ def get_result_str(wer_align: List, hyp: List[str], ref: List[str]) -> str:
     return f'pred_phones:\t{lines[0]}\ntrue_phones:\t{lines[1]}\n'
 
 
+def get_acc(wer_align: List) -> Tuple[int, int]:
+    n = len(wer_align)
+    correct = n
+    for i in range(n):
+        err = wer_align[i][0]
+        if err == 'S':
+            correct -= 1
+        # elif err == 'I':
+        elif err == 'D':
+            correct -= 1
+
+    return correct, n
+
+
 def main():
     args = get_args()
 
@@ -93,6 +107,16 @@ def main():
             f.write(get_result_str(error_type, hyp[utt], ref[utt]))
 
     f.close()
+
+    correct = 0
+    total = 0
+    for utt, s in hyp.items():
+        if utt in ref:
+            error_type = wer_align[utt]
+            _correct, _total = get_acc(error_type)
+            correct += _correct
+            total += _total
+    print(f'Acc {correct / total:.3f}')
 
 
 if __name__ == '__main__':
